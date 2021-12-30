@@ -1,7 +1,7 @@
 # SCO-SSL
 Shadow-consistent Semi-supervised Learning for Prostate Ultrasound Segmentation
 
-This is a python (PyTorch) implementation of **Shadow-consistent Semi-supervised Learning (SCO-SSL)** method for prostate ultrasound segmentation proposed in our ***TMI*** journal paper [**"Shadow-consistent Semi-supervised Learning for Prostate Ultrasound Segmentation"**](early accepted).
+This is a python (PyTorch) implementation of **Shadow-consistent Semi-supervised Learning (SCO-SSL)** method for prostate ultrasound segmentation proposed in our ***TMI*** journal paper [**"Shadow-consistent Semi-supervised Learning for Prostate Ultrasound Segmentation"**](early access).
 
 ### Scheme of SCO-SSL
 <img src="./fig1.png"/>

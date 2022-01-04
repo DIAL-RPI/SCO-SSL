@@ -16,10 +16,13 @@ This is a python (PyTorch) implementation of **Shadow-consistent Semi-supervised
 
 
 ## Citation
-    @article{Xu2021ProstateSeg,
-      title = {Shadow-consistent semi-supervised learning for prostate ultrasound segmentation},
-      author = {Xuanang Xu and Thomas Sanford and Baris Turkbey and Sheng Xu and Bradford J. Wood and Pingkun Yan},
-      year = {2022},
-      publisher = {IEEE},
-      journal = {IEEE Trans. Med. Imag.}
+    @article{Xu2021SCOSSL,
+      title={Shadow-consistent Semi-supervised Learning for Prostate Ultrasound Segmentation}, 
+      author={Xu, Xuanang and Sanford, Thomas and Turkbey, Baris and Xu, Sheng and Wood, Bradford J. and Yan, Pingkun},
+      journal={IEEE Transactions on Medical Imaging}, 
+      year={2021},
+      volume={},
+      number={},
+      pages={1-1},
+      doi={10.1109/TMI.2021.3139999}
     }

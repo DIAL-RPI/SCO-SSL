@@ -23,10 +23,8 @@ This is a python (PyTorch) implementation of **Shadow-consistent Semi-supervised
 ### Scheme of SCO-SSL
 <img src="./fig1.png"/>
 
-
 ### Scheme of Shadow augmentation (Shadow-AUG)
 <img width="600" src="./fig2.png"/>
-
 
 ### Scheme of Shadow dropout (Shadow-DROP)
 <img width="600" src="./fig3.png"/>

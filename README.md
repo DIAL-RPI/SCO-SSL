@@ -19,6 +19,7 @@ This is a python (PyTorch) implementation of **Shadow-consistent Semi-supervised
 ## Update
 Mar 23, 2022: Add a script [`3d_dist_visual.py`](https://github.com/DIAL-RPI/SCO-SSL/blob/main/3d_dist_visual.py) for **3D distance error visualization** that was shown in our paper.
 
+## Method
 ### Scheme of SCO-SSL
 <img src="./fig1.png"/>
 

@@ -31,5 +31,5 @@ This is a python (PyTorch) implementation of **Shadow-consistent Semi-supervised
 
 ## Contact
 You are welcome to contact us:  
-  [xux12@rpi.edu](mailto:xux12@rpi.edu)(Xuanang Xu)  
-  [superxuang@gmail.com](mailto:superxuang@gmail.com)(Xuanang Xu)
+  - [xux12@rpi.edu](mailto:xux12@rpi.edu)(Xuanang Xu)  
+  - [superxuang@gmail.com](mailto:superxuang@gmail.com)(Xuanang Xu)

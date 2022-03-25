@@ -28,3 +28,8 @@ This is a python (PyTorch) implementation of **Shadow-consistent Semi-supervised
 
 ### Scheme of Shadow dropout (Shadow-DROP)
 <img width="600" src="./fig3.png"/>
+
+## Contact
+    You are welcome to contact us:
+      [xux12@rpi.edu](mailto:xux12@rpi.edu)
+      [superxuang@gmail.com](mailto:superxuang@gmail.com)

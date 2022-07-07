@@ -14,7 +14,7 @@ This is a python (PyTorch) implementation of **Shadow-consistent Semi-supervised
       volume={41},
       number={6},
       pages={1331-1345},
-      publisher={IEEE}
+      publisher={IEEE},
       doi={10.1109/TMI.2021.3139999}
     }
 

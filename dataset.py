@@ -42,7 +42,7 @@ def scan_path(d_name, d_path):
                             entries.append([d_name, case_name, image_name, label_name, True])
     return entries
 
-def create_ucla_folds(data_path, fraction, exclude_case):
+def create_data_folds(data_path, fraction, exclude_case):
     fold_file_name = '{0:s}/CV_UCLA-fold.txt'.format(sys.path[0])
     folds = {}
     if os.path.exists(fold_file_name):
@@ -199,7 +199,7 @@ def make_flag(cls, labelmap):
 # dataset of 3D image volume
 # 3D volumes are resampled from and center-aligned with the original images
 class Dataset(data.Dataset):
-    def __init__(self, ids, rs_size, rs_spacing, rs_intensity, label_map, cls_num, aug_data, load_dist, center_aligned):
+    def __init__(self, ids, rs_size, rs_spacing, rs_intensity, label_map, cls_num, aug_data, center_aligned):
         self.ImageType = itk.Image[itk.SS, 3]
         self.LabelType = itk.Image[itk.UC, 3]
         self.FloatType = itk.Image[itk.F, 3]
@@ -210,7 +210,6 @@ class Dataset(data.Dataset):
         self.label_map = label_map
         self.cls_num = cls_num
         self.aug_data = aug_data
-        self.load_dist = load_dist
         self.center_aligned = center_aligned
         self.case_center = {}
     
@@ -265,34 +264,6 @@ class Dataset(data.Dataset):
         output['org_spacing'] = image['org_spacing']
         output['org_origin'] = image['org_origin']
         output['eof'] = True
-
-        if self.load_dist:
-            if d_name == 'prostate_labeled':
-                dist_fn = '{0:s}/uronav_data/Case{1:04d}/us_dist.nii.gz'.format(os.path.dirname(os.path.dirname(image_fn)), int(casename.split('Case')[1]))
-                dist_polar_fn = '{0:s}/uronav_data/Case{1:04d}/us_dist_polar.nii.gz'.format(os.path.dirname(os.path.dirname(image_fn)), int(casename.split('Case')[1]))
-            else:
-                dist_fn = '{0:s}/us_dist.nii.gz'.format(os.path.dirname(label_fn))
-                dist_polar_fn = '{0:s}/us_dist_polar.nii.gz'.format(os.path.dirname(label_fn))
-            if labeled:
-                src_dist = read_image(fname=dist_fn, imtype=self.FloatType)
-                dist = resample(image=src_dist, imtype=self.FloatType, size=self.rs_size, spacing=self.rs_spacing, origin=cm, 
-                                transform=t, linear=True, dtype=np.float32, use_min_default=True)
-                #dist['array'] = np.repeat(dist['array'], 2, axis=0)
-                #dist['array'][0,:] = 1 - dist['array'][1,:]
-                dist_tensor = torch.from_numpy(dist['array'])
-
-                src_dist_polar = read_image(fname=dist_polar_fn, imtype=self.FloatType)
-                dist_polar = resample(image=src_dist_polar, imtype=self.FloatType, size=self.rs_size, spacing=self.rs_spacing, origin=cm, 
-                                transform=t, linear=True, dtype=np.float32, use_min_default=True)
-                dist_polar_tensor = torch.from_numpy(dist_polar['array'])
-            else:
-                #dist_array = np.repeat(np.zeros_like(image['array'], dtype=np.float32), 2, axis=0)
-                dist_array = np.zeros_like(image['array'], dtype=np.float32)
-                dist_tensor = torch.from_numpy(dist_array)
-                dist_polar_array = np.zeros_like(image['array'], dtype=np.float32)
-                dist_polar_tensor = torch.from_numpy(dist_polar_array)
-            output['dist'] = dist_tensor
-            output['dist_polar'] = dist_polar_tensor
 
         return output
 

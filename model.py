@@ -166,5 +166,20 @@ class ShadowUNet(nn.Module):
 
         return output
 
+    def initialization(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Conv3d):
+                nn.init.xavier_normal_(m.weight)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm3d):
+                nn.init.constant_(m.weight, 1)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.xavier_normal_(m.weight)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+
     def description(self):
         return 'U-Net equipped with Shadow-DROP in encoding path (input channel = {0:d}, base channel = {1:d})'.format(self.in_ch, self.base_ch)

@@ -7,25 +7,14 @@ import torch.nn as nn
 from torch import optim
 from torch.utils import data
 import math
-from dataset import create_ucla_folds, Dataset, TSDataset
+from dataset import create_data_folds, Dataset, TSDataset
 from model import shadow_aug, ShadowUNet
 from loss import DiceLoss
 from utils import resample_array, output2file, generate_transform
 from metric import eval
 from config import cfg
 
-def initial_net(net):
-    for m in net.modules():
-        if isinstance(m, nn.Conv2d) or isinstance(m, nn.Conv3d):
-            nn.init.xavier_normal_(m.weight)
-            nn.init.constant_(m.bias, 0)
-        elif isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm3d):
-            nn.init.constant_(m.weight, 1)
-            nn.init.constant_(m.bias, 0)
-        elif isinstance(m, nn.Linear):
-            nn.init.xavier_normal_(m.weight)
-            nn.init.constant_(m.bias, 0)
-
+# initialize teacher model parameters using corresponding student model parameters
 def initial_teacher(teacher, student):
     sd_tea = teacher.state_dict()
     sd_stu = student.state_dict()
@@ -33,6 +22,7 @@ def initial_teacher(teacher, student):
         sd_tea[key] = sd_stu[key]
     teacher.load_state_dict(sd_tea)
 
+# update teacher model parameters using exponential moving average (EMA)
 def update_teacher(teacher, student, alpha):
     sd_tea = teacher.state_dict()
     sd_stu = student.state_dict()
@@ -57,7 +47,8 @@ def train(cfg):
     best_model_fn = '{}/cp-epoch_{}.pth.tar'.format(store_dir, 1)
 
     # create data split according to cfg['fold_fraction'] in config.py
-    folds, _ = create_ucla_folds(data_path=cfg['data_path_train'], fraction=cfg['fold_fraction'], exclude_case=cfg['exclude_case'])
+    # e.g., cfg['fold_fraction'] = [575,115,460] means 575/115/460 samples for training/validation/testing, respectively
+    folds, _ = create_data_folds(data_path=cfg['data_path_train'], fraction=cfg['fold_fraction'], exclude_case=cfg['exclude_case'])
     
     # divide training data into 'labeled samples' and 'unlabeled sampled' according to cfg['labeled_num'] in config.py
     labeled_case = []
@@ -88,19 +79,19 @@ def train(cfg):
     
     # create validaion fold
     val_fold = folds[1]
-    d_val = Dataset(val_fold, rs_size=cfg['rs_size'], rs_spacing=cfg['rs_spacing'], rs_intensity=cfg['rs_intensity'], label_map=cfg['label_map'], cls_num=cfg['cls_num'], aug_data=False, load_dist=False, center_aligned=False)
+    d_val = Dataset(val_fold, rs_size=cfg['rs_size'], rs_spacing=cfg['rs_spacing'], rs_intensity=cfg['rs_intensity'], label_map=cfg['label_map'], cls_num=cfg['cls_num'], aug_data=False, center_aligned=False)
     dl_val = data.DataLoader(dataset=d_val, batch_size=cfg['test_batch_size'], shuffle=False, pin_memory=True, drop_last=False, num_workers=cfg['cpu_thread'])
 
     # create testing fold
     test_fold = folds[2]
-    d_test = Dataset(test_fold, rs_size=cfg['rs_size'], rs_spacing=cfg['rs_spacing'], rs_intensity=cfg['rs_intensity'], label_map=cfg['label_map'], cls_num=cfg['cls_num'], aug_data=False, load_dist=False, center_aligned=False)
+    d_test = Dataset(test_fold, rs_size=cfg['rs_size'], rs_spacing=cfg['rs_spacing'], rs_intensity=cfg['rs_intensity'], label_map=cfg['label_map'], cls_num=cfg['cls_num'], aug_data=False, center_aligned=False)
     dl_test = data.DataLoader(dataset=d_test, batch_size=cfg['test_batch_size'], shuffle=False, pin_memory=True, drop_last=False, num_workers=cfg['cpu_thread'])
 
     # creat student model
     stu_model = ShadowUNet(in_ch=1, base_ch=64)
+    stu_model.initialization()
     stu_net = nn.DataParallel(module=stu_model)
     stu_net.cuda()
-    initial_net(stu_net)
 
     # creat teacher model
     tea_model = ShadowUNet(in_ch=1, base_ch=64)
@@ -132,7 +123,7 @@ def train(cfg):
     for epoch_id in range(start_epoch, cfg['epoch_num'], 1):
         t0 = time.perf_counter()
         
-        # training
+        # training phase
         torch.enable_grad()
         stu_net.train()
         tea_net.eval()
@@ -182,21 +173,27 @@ def train(cfg):
             
             tea_image = tea_image.cuda()
 
+            # shadow augmentation for teacher model input
             tea_image, tea_shadow = shadow_aug(tea_image, cfg, order='ascending')
 
             tea_pred = tea_net(tea_image, tea_shadow)
             tea_pred = tea_pred.detach()
 
+            # generate pseudo label using teacher output
             ps_label = torch.zeros_like(stu_label)
             for c in range(cfg['cls_num']):
                 for n in range(N):
                     ps_array = tea_pred[n,c*2+1,:].cpu().numpy()
 
+                    # inversely tranform the teacher output to the original image space
+                    # (because the teacher input is augmented from the original image space by ramdon translation and rotation)
                     t_inv = generate_transform(tea_trans[n,:].numpy(), inverse=True)
                     tmp_array = resample_array(ps_array.copy(), tea_size[n,:].numpy(), tea_spacing[n,:].numpy(), tea_origin[n,:].numpy(), 
                                                 stu_size[n,:].numpy(), stu_spacing[n,:].numpy(), stu_origin[n,:].numpy(), 
                                                 transform=t_inv, linear=True)
-
+                    
+                    # further transform the above output to the student input space
+                    # (because the student input is augmented from the original image space by another ramdon translation and rotation different from the teacher's augmentation)
                     t = generate_transform(stu_trans[n,:].numpy(), inverse=False)
                     tmp_array = resample_array(tmp_array, stu_size[n,:].numpy(), stu_spacing[n,:].numpy(), stu_origin[n,:].numpy(), 
                                                 stu_size[n,:].numpy(), stu_spacing[n,:].numpy(), stu_origin[n,:].numpy(), 
@@ -208,7 +205,8 @@ def train(cfg):
             stu_image = stu_image.cuda()
             stu_label = stu_label.cuda()
             ps_label = ps_label.cuda()
-            
+
+            # shadow augmentation for student model input
             stu_image, stu_shadow = shadow_aug(stu_image, cfg, order='descending')
 
             stu_pred = stu_net(stu_image, stu_shadow)
@@ -216,10 +214,12 @@ def train(cfg):
             print_line = 'Epoch {0:d}/{1:d} (train) --- Progress {2:5.2f}% (+{3:02d})'.format(
                 epoch_id+1, cfg['epoch_num'], 100.0 * batch_id * cfg['labeled_sample'] / len(d_train), N)
 
+            # only calculate dice loss on the labeled samples (flag == 1)
             loss_sup = dice_loss(stu_pred, stu_label, flag)
             epoch_loss[0] += loss_sup.item()
             epoch_loss_num[0] += 1
-            loss_con = bce_loss(stu_pred, ps_label) # consistency loss is also calculated on labeled data to mitigate overfitting on small-size labeled data
+            # calculate consistency loss over all samples
+            loss_con = bce_loss(stu_pred, ps_label)
             loss = loss_sup + lamda_con * loss_con
 
             print_line += ' --- Loss: {0:.6f}/{1:.6f}/{2:.6f} - {3:.6f}'.format(
@@ -229,12 +229,14 @@ def train(cfg):
                 lamda_con)
             print(print_line)
             
+            # update student model parameters
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
             del tea_image, tea_shadow, stu_image, stu_label, stu_shadow, ps_label, stu_pred, tea_pred, loss, loss_sup, loss_con
             
+            # update teacher model parameters
             update_teacher(tea_net, stu_net, alpha=0.99)
             batch_id += 1
 
@@ -245,7 +247,7 @@ def train(cfg):
             epoch_id+1, cfg['epoch_num'], train_loss, '/'.join(['%.6f']*len(epoch_loss)) % tuple(epoch_loss))
         print(print_line)
 
-        # validation
+        # validation phase
         torch.no_grad()
         stu_net.eval()
         tea_net.eval()
@@ -267,7 +269,7 @@ def train(cfg):
                 tea_pred_bin = torch.argmax(tea_pred[:,c*2:c*2+2], dim=1, keepdim=True)
                 for i in range(N):
                     if flag[i, c] > 0:
-                        # output teacher prediction
+                        # output teacher prediction to mask files
                         tea_mask = tea_pred_bin[i,:].contiguous().cpu().numpy().copy().astype(dtype=np.uint8)
                         tea_mask = np.squeeze(tea_mask)
                         tea_mask = resample_array(
@@ -281,6 +283,7 @@ def train(cfg):
 
             del image, tea_pred
         
+        # evaluate segmentation results on validation set
         tea_dsc, tea_asd, tea_hd, tea_dsc_m, tea_asd_m, tea_hd_m = eval(
             pd_path=val_result_path, gt_entries=val_fold, label_map=cfg['label_map'], cls_num=cfg['cls_num'], 
             metric_fn='val_results-epoch-{0:04d}'.format(epoch_id+1), calc_asd=False)
@@ -305,7 +308,7 @@ def train(cfg):
         with open(loss_fn, 'a') as loss_file:
             loss_file.write(loss_line)
 
-        # save best model
+        # save the historic best model
         if epoch_id == 0 or tea_dsc_m > best_val_acc:
             # remove former best model
             if os.path.exists(best_model_fn):
@@ -349,6 +352,7 @@ def train(cfg):
         for c in range(cfg['cls_num']):
             pred_bin = torch.argmax(pred[:,c*2:c*2+2], dim=1, keepdim=True)
             for i in range(n):
+                # output teacher prediction to mask files
                 mask = pred_bin[i,:].contiguous().cpu().numpy().copy().astype(dtype=np.uint8)
                 mask = np.squeeze(mask)
                 mask = resample_array(
@@ -360,6 +364,7 @@ def train(cfg):
         
         del image, pred
     
+    # evaluate segmentation results on testing set
     dsc, asd, hd, dsc_m, asd_m, hd_m = eval(
         pd_path=test_result_path, gt_entries=test_fold, label_map=cfg['label_map'], cls_num=cfg['cls_num'], 
         metric_fn='test_results', calc_asd=True, keep_largest=True)

@@ -19,6 +19,7 @@ This is a python (PyTorch) implementation of **Shadow-consistent Semi-supervised
     }
 
 ## Update
+  - **Sep 15, 2022**: Add a script [`UCLA_data_conversion.py`](https://github.com/DIAL-RPI/SCO-SSL/blob/main/UCLA_data_conversion.py) for **data format conversion** (from *DICOM/STL* to *NIfTI* format) specially designed for [**UCLA Prostate-MRI-US-Biopsy dataset**](https://doi.org/10.7937/TCIA.2020.A61IOC1A) that was used in our paper.
   - **Mar 23, 2022**: Add a script [`3d_dist_visual.py`](https://github.com/DIAL-RPI/SCO-SSL/blob/main/3d_dist_visual.py) for **3D distance error visualization** that was shown in our paper.
 
 ## Abstract
@@ -33,6 +34,9 @@ Prostate segmentation in transrectal ultrasound (TRUS) image is an essential pre
 
 ### Scheme of Shadow dropout (Shadow-DROP)
 <img width="600" src="./fig3.png"/>
+
+## Data
+You can run our code using the public dataset, [**UCLA Prostate-MRI-US-Biopsy dataset**](https://doi.org/10.7937/TCIA.2020.A61IOC1A), shared by the Institute of Urologic Oncology, University of California-Los Angeles (UCLA) on [**the Cancer Imaging Archive (TCIA)**](https://www.cancerimagingarchive.net/) platform. We provided a Python script [`UCLA_data_conversion.py`](https://github.com/DIAL-RPI/SCO-SSL/blob/main/UCLA_data_conversion.py) to convert the original data to the NIfTI format that was accepted by our dataloader interface.
 
 ## Contact
 You are welcome to contact us:  

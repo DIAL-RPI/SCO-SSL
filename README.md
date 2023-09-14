@@ -40,5 +40,4 @@ You can run our code using the public dataset, [**UCLA Prostate-MRI-US-Biopsy da
 
 ## Contact
 You are welcome to contact us:  
-  - [xux12@rpi.edu](mailto:xux12@rpi.edu)(Dr. Xuanang Xu)  
-  - [superxuang@gmail.com](mailto:superxuang@gmail.com)(Dr. Xuanang Xu)
+  - [xux12@rpi.edu](mailto:xux12@rpi.edu)(Dr. Xuanang Xu)
